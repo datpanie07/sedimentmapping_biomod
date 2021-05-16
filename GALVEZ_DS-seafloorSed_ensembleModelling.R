@@ -24,12 +24,12 @@ library(tidyr)
 library(usdm)
 
 ##########################################################################################
-########################### DATA PREPARATION ##############################
-#########################################################################################
+########################### DATA PREPARATION #############################################
+##########################################################################################
 
 ### Load response variables--sediment classes or species that you would like to model
 ### Here the files are in shapefile format, where the attribute tables contain:
-## the coordinates of the samples and a column stating the presence/absence (1-0) of the response variable
+#####the coordinates of the samples and a column stating the presence/absence (1-0) of the response variable
 
 lag18<- readOGR(dsn = "E:/H3/2018/shp_utm", layer = "H32018LagSed_presence_utm2")
 sand18 <- readOGR(dsn = "E:/H3/2018/shp_utm", layer = "H32018Sand_presence_utm2")
@@ -60,9 +60,9 @@ pred <- stack(tex5, tex10, gp)
 plot(pred$sss)
 plot(lag18, add=T)
 
-#########################################################################
+##############################################################################
 ########### FEATURE SELECTION: VIF TEST FOR MULTICOLLINEARITY ################
-#####################################################################
+##############################################################################
 ## The VIF test is to evaluate if there are multi-collinearity or high correlation between your predictors
 ### the following steps will identify predictors with high correlation value and 
 #### remove them from your set of predictor variables
@@ -93,8 +93,8 @@ pred.lsp <- exclude(pred, v2)
 
 
 ###################################################################################
-##################### BIOMOD MODELLING STEP 1: FORMAT DATA #################
-##################################################################################
+##################### BIOMOD MODELLING STEP 1: FORMAT DATA ########################
+###################################################################################
 
 ### Load the predictor variables from the VIF test; Please note that each sediment class 
 ##### usually require different sets of predictor variables, therefore you cannot use the same predictors
@@ -131,7 +131,7 @@ pred.fsp <- stack(pred.fsp)
 
 ##### Format  your response and explanatory variables as BIOMOD data
 set.seed(555) ##set seed to generate the same datasets in every model runs
-data_lsp18<- BIOMOD_FormatingData(resp.var = lsp18['LagSed'],##name of your response variable in the column
+data_lag18<- BIOMOD_FormatingData(resp.var = lag18['LagSed'],##name of your response variable in the column
                                    expl.var = pred.lsp, ## predictor variables--rasterStack
                                    resp.name = 'LagSed',
                                    PA.nb.rep = 3, ## pseudo-absences will be generated 3x in 3 different random locations
@@ -139,9 +139,9 @@ data_lsp18<- BIOMOD_FormatingData(resp.var = lsp18['LagSed'],##name of your resp
                                    PA.strategy = 'random') ## pseudo-absences strategy 
 
 set.seed(555)
-data_fsp18<- BIOMOD_FormatingData(resp.var = fsp18['fSa'],
+data_sand18<- BIOMOD_FormatingData(resp.var = sand18['fSa'],
                                   expl.var = pred.fsp1,
-                                  resp.name = 'fSa',
+                                  resp.name = 'Sand',
                                   PA.nb.rep = 3,
                                   PA.nb.absences = 200,
                                   PA.strategy = 'random')
@@ -149,8 +149,8 @@ data_fsp18<- BIOMOD_FormatingData(resp.var = fsp18['fSa'],
 
 
 ###################################################################################
-##################### BIOMOD MODELLING STEP 2: SET INDIVIDUAL MODEL SETTINGS #################
-##################################################################################
+##################### BIOMOD MODELLING STEP 2: SET INDIVIDUAL MODEL SETTINGS ######
+###################################################################################
 
 ##### For each sediment class, you have to set the parameters of the models that you would like
 ###### to use for the ensemble models. Settings need to be set accordingly during model calibration/fitting
@@ -158,7 +158,7 @@ data_fsp18<- BIOMOD_FormatingData(resp.var = fsp18['fSa'],
 ### Model settings for Lag sediment models
 
 set.seed(555)
-Optmod18_lsp <- BIOMOD_ModelingOptions(
+Optmod_lag <- BIOMOD_ModelingOptions(
   GBM = list(distribution= "bernoulli", ntrees =5000, shrinkage= 0.001, 
              interaction.depth = 5, bag.fraction = 0.5, cv.folds=10),
   CTA= list(method="class", control=rpart.control(minsplit= 1, xval=10, cp = 0.01),
@@ -167,7 +167,7 @@ Optmod18_lsp <- BIOMOD_ModelingOptions(
 
 ###  Model settings for sand models
 set.seed(555)
-Optmod_fsp18 <- BIOMOD_ModelingOptions(
+Optmod_sand <- BIOMOD_ModelingOptions(
   GBM = list(distribution= "bernoulli", ntrees =5000, shrinkage= 0.001, 
              interaction.depth= 5,bag.fraction = 0.5, cv.folds=10),
   CTA= list(method= "class", control= rpart.control(cp = 0.05,minsplit= 5)),
@@ -176,7 +176,7 @@ Optmod_fsp18 <- BIOMOD_ModelingOptions(
 # ANN = list (size = 2, rang= 0.5, decay= 5e-04, maxit = 300))
 
 
-###################################################################################
+##################################################################################
 ##################### BIOMOD MODELLING STEP 3: MODEL CALIBRATION #################
 ##################################################################################
 ### In this step, you need to run and re-run the models until you achieve a desirable
@@ -187,9 +187,9 @@ Optmod_fsp18 <- BIOMOD_ModelingOptions(
 
 ## LagSed single model runs
 set.seed(555)
-mod.lag <- BIOMOD_Modeling( data = data_lsp18,## data in biomod format
+mod.lag <- BIOMOD_Modeling( data = data_lag18,## data in biomod format
                               models = c( 'CTA','GBM', 'RF', 'ANN'), ## model choice
-                              models.options = Optmod18_lsp, ## individual model settings
+                              models.options = Optmod_lag, ## individual model settings
                               NbRunEval = 20, ## no. of evaluation runs
                               DataSplit = 70, ## data split for training and testing; 70-30%
                               Yweights = NULL,
@@ -206,7 +206,7 @@ mod.lag <- BIOMOD_Modeling( data = data_lsp18,## data in biomod format
 set.seed(555)
 mod.sand <- BIOMOD_Modeling( data = data_fsp18,
                               models = c('GBM', 'RF', 'ANN','CTA'),
-                              models.options = Optmod_fsp18,
+                              models.options = Optmod_sand,
                               NbRunEval = 20,
                               DataSplit = 70,
                               Yweights = NULL,
@@ -219,8 +219,8 @@ mod.sand <- BIOMOD_Modeling( data = data_fsp18,
 
 
 ###################################################################################
-##################### BIOMOD MODELLING STEP 4: SINGLE MODEL EVALUATION ###########
-##################################################################################
+##################### BIOMOD MODELLING STEP 4: SINGLE MODEL EVALUATION ############
+###################################################################################
 ### Here, you can assess your model performance using different graphs
 
 ######## Plot model scores according to model algorithms,
@@ -304,8 +304,8 @@ apply(fsp18_VI, c(1,2), mean)
 
 
 ###################################################################################
-##################### BIOMOD MODELLING STEP 5: ENSEMBLE MODELLING ###########
-##################################################################################
+##################### BIOMOD MODELLING STEP 5: ENSEMBLE MODELLING #################
+###################################################################################
 
 #### After you achieved a satisfying performance score of your single models, 
 ##### you can now build your ensemble models
@@ -345,8 +345,8 @@ sand.EM <- BIOMOD_EnsembleModeling(
                     prob.mean.weight.decay = 'proportional')
 
 ###############################################
-##### Evaluate the ensemble models #########
-############################################
+##### Evaluate the ensemble models ############
+###############################################
 
 #### Load score for each ensemble models
 
@@ -368,7 +368,7 @@ summary(sandEM_kept)
 
 ###################################################################################
 ##################### BIOMOD MODELLING STEP 6: SINGLE MODELS PROJECTION ###########
-##################################################################################
+###################################################################################
 
 ###### Project the sediment distribution using the single models
 
@@ -404,9 +404,9 @@ sand_sp <- get_projected_models(sp_sand)
 summary(lag_sp)
 summary(sand_sp)
 
-###################################################################################
+####################################################################################
 ##################### BIOMOD MODELLING STEP 7: ENSEMBLE MODEL PROJECTION ###########
-##################################################################################
+####################################################################################
 
 ###### Project the sediment distribution using the ensemble model
 lag.EMproj <- BIOMOD_EnsembleForecasting(
@@ -428,8 +428,8 @@ sand.EMproj <- BIOMOD_EnsembleForecasting(
 
 
 ###################################################################################
-##################### BIOMOD MODELLING STEP 8: PLOT PROJECTIONS #############
-##################################################################################
+##################### BIOMOD MODELLING STEP 8: PLOT PROJECTIONS ###################
+###################################################################################
 
 ### The output from the single and ensemble projections area saved in your working directory as .img or rasters
 ##### You can view the results here or in your GIS software
