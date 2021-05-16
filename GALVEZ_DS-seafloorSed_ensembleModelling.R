@@ -2,7 +2,7 @@
 ###### This script is a supplementary material of the research article entitled: Ensemble mapping
 #### and change analysis of sediment distributions in the Sylt Outer Reef, German North Sea from 2016-2018
 #### Galvez, D.S. et al., 2021#####
-##### script author:  Galvez,D.S.; written in May 2021#################
+##### script author:  Galvez,D.S.; written in May 2021
 #############################################################################################
 ## set working directory
 setwd("E:/H3/2018")
